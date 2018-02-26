@@ -43,6 +43,38 @@ void sigint_handler(int s)
     protonect_shutdown = true;
 }
 
+void DepthImage_convert_32FC1_to_16UC1(cv::Mat &dest, const cv::Mat &src, float scale) {
+//    assert(src.type() != CV_32FC1 && "DepthImage_convert_32FC1_to_16UC1: source image of different type from 32FC1");
+    const float *sptr = (const float*)src.data;
+    int size = src.rows * src.cols;
+    const float *send = sptr + size;
+    dest.create(src.rows, src.cols, CV_16UC1);
+    dest.setTo(cv::Scalar(0));
+    unsigned short *dptr = (unsigned short*)dest.data;
+    while(sptr<send) {
+        if(*sptr < std::numeric_limits<float>::max())
+            *dptr = scale * (*sptr);
+        dptr ++;
+        sptr ++;
+    }
+}
+
+void DepthImage_convert_16UC1_to_32FC1(cv::Mat &dest, const cv::Mat &src, float scale) {
+//    assert(src.type() != CV_16UC1 && "DepthImage_convert_16UC1_to_32FC1: source image of different type from 16UC1");
+    const unsigned short *sptr = (const unsigned short*)src.data;
+    int size = src.rows * src.cols;
+    const unsigned short *send = sptr + size;
+    dest.create(src.rows, src.cols, CV_32FC1);
+    dest.setTo(cv::Scalar(0.0f));
+    float *dptr = (float*)dest.data;
+    while(sptr < send) {
+        if(*sptr)
+            *dptr = scale * (*sptr);
+        dptr ++;
+        sptr ++;
+    }
+}
+
 int main()
 {
     std::cout << "Streaming from Kinect One sensor!" << std::endl;
@@ -126,25 +158,26 @@ int main()
         libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
         //! [loop start]
 
-//        cv::Mat(rgb->height, rgb->width, CV_8UC4, rgb->data).copyTo(rgbmat);
-//        cv::Mat(ir->height, ir->width, CV_32FC1, ir->data).copyTo(irmat);
-        cv::Mat(depth->height, depth->width, CV_32FC1, depth->data).copyTo(depthmat);
-
-
-//        cv::imshow("rgb", rgbmat);
-//        cv::imshow("ir", irmat / 4096.0f);
-        cv::imshow("depth", depthmat / 4096.0f);
+        //        cv::Mat(rgb->height, rgb->width, CV_8UC4, rgb->data).copyTo(rgbmat);
+        //        cv::Mat(ir->height, ir->width, CV_32FC1, ir->data).copyTo(irmat);
+        //        cv::Mat(depth->height, depth->width, CV_32FC1, depth->data).copyTo(depthmat);
+        //        cv::imshow("rgb", rgbmat);
+        //        cv::imshow("ir", irmat / 4096.0f);
+        //        cv::imshow("depth", depth);
 
         //! [registration]
         registration->apply(rgb, depth, &undistorted, &registered, true);
         //! [registration]
-
-        cv::Mat(undistorted.height, undistorted.width, CV_8UC4, undistorted.data).copyTo(depthmatUndistorted);
+        cv::Mat(undistorted.height, undistorted.width, CV_32FC1, undistorted.data).copyTo(depthmatUndistorted);
         cv::Mat(registered.height, registered.width, CV_8UC4, registered.data).copyTo(rgbd);
-//        cv::Mat(depth2rgb.height, depth2rgb.width, CV_32FC1, depth2rgb.data).copyTo(rgbd2);
+        //        cv::Mat(depth2rgb.height, depth2rgb.width, CV_32FC1, depth2rgb.data).copyTo(rgbd2);
 
-        cv::imshow("undistorted", depthmatUndistorted);
+//        Mat depth16;
+//        DepthImage_convert_32FC1_to_16UC1(depth16, depthmatUndistorted, 0.0002f);
+
+        cv::imshow("undistorted", depthmatUndistorted * 0.0002f);
         cv::imshow("registered", rgbd);
+
 
         if (recording) {
 
@@ -152,11 +185,12 @@ int main()
             ss << "../../../data/d";
             ss << setfill('0') << setw(7) << frameCount;
             ss << ".png";
-//            std::cerr << "Gravando " << ss.str() << "\n";
-            std::vector<int> compression_params;
-            compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-            compression_params.push_back(0);
-            cv::imwrite(ss.str(), depthmatUndistorted, compression_params);
+            //            std::cerr << "Gravando " << ss.str() << "\n";
+//            std::vector<int> compression_params;
+//            compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+//            compression_params.push_back(0);
+//            cv::imwrite(ss.str(), depthmatUndistorted, compression_params);
+            cv::imwrite(ss.str(), depthmatUndistorted);
 
             //limpar o ss
             ss.str(std::string());
@@ -165,14 +199,14 @@ int main()
             ss << "../../../data/c";
             ss << setfill('0') << setw(7) << frameCount;
             ss << ".png";
-//            std::cerr << "Gravando " << ss.str() << "\n";
+            //            std::cerr << "Gravando " << ss.str() << "\n";
             cv::imwrite(ss.str(), rgbd);
             frameCount++;
         }
-//        cv::imshow("depth2RGB", rgbd2 / 4096.0f);
+        //        cv::imshow("depth2RGB", rgbd2 / 4096.0f);
 
         int key = cv::waitKey(1);
-        protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
+        protonect_shutdown = protonect_shutdown || (key > 0 & 0 & ((key & 0xFF) == 27)); // shutdown on escape
 
         if(key == 'r' || key == 'R'){
             recording = !recording;

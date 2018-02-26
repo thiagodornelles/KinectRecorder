@@ -25,18 +25,16 @@ HEADERS  += \
 
 
 INCLUDEPATH += /usr/local/include/ \
-INCLUDEPATH += /usr/local/Cellar/opencv/3.3.0_3/include/ \
+INCLUDEPATH += /usr/local/include/opencv \
 
 
-LIBS += -L/usr/local/Cellar/opencv/3.3.0_3/lib \
-        -L/usr/local/lib \
+LIBS += -L/usr/local/lib \
         -lopencv_core \
         -lopencv_imgproc \
         -lopencv_features2d \
         -lopencv_highgui \
         -lopencv_objdetect \
-        -lopencv_ximgproc \
-        -lopencv_imgcodecs \
+        -lopencv_imgproc \
         -lopencv_calib3d \
         -lopencv_photo \
         -lfreenect2 \
