@@ -45,9 +45,9 @@ void sigint_handler(int s)
 
 void DepthImage_convert_32FC1_to_16UC1(cv::Mat &dest, const cv::Mat &src, float scale) {
 //    assert(src.type() != CV_32FC1 && "DepthImage_convert_32FC1_to_16UC1: source image of different type from 32FC1");
-    const float *sptr = (const float*)src.data;
+    float *sptr = (float*)src.data;
     int size = src.rows * src.cols;
-    const float *send = sptr + size;
+    float *send = sptr + size;
     dest.create(src.rows, src.cols, CV_16UC1);
     dest.setTo(cv::Scalar(0));
     unsigned short *dptr = (unsigned short*)dest.data;
@@ -77,6 +77,10 @@ void DepthImage_convert_16UC1_to_32FC1(cv::Mat &dest, const cv::Mat &src, float 
 
 int main()
 {
+    system("rm -rf data/depth");
+    system("rm -rf data/rgb");
+    system("mkdir data/depth");
+    system("mkdir data/rgb");
     std::cout << "Streaming from Kinect One sensor!" << std::endl;
 
     //! [context]
@@ -138,6 +142,8 @@ int main()
     //! [registration setup]
 
     Mat rgbmat, depthmat, depthmatUndistorted, irmat, rgbd, rgbd2;
+    Mat depth16;
+
     std::cerr << "Color calibration\n";
     std::cerr << "cx: " << dev->getColorCameraParams().cx << std::endl;
     std::cerr << "cy: " << dev->getColorCameraParams().cy << std::endl;
@@ -171,18 +177,16 @@ int main()
         cv::Mat(undistorted.height, undistorted.width, CV_32FC1, undistorted.data).copyTo(depthmatUndistorted);
         cv::Mat(registered.height, registered.width, CV_8UC4, registered.data).copyTo(rgbd);
         //        cv::Mat(depth2rgb.height, depth2rgb.width, CV_32FC1, depth2rgb.data).copyTo(rgbd2);
+        Mat depth16;
+        DepthImage_convert_32FC1_to_16UC1(depth16, depthmatUndistorted, 1.f);
 
-//        Mat depth16;
-//        DepthImage_convert_32FC1_to_16UC1(depth16, depthmatUndistorted, 0.0002f);
-
-        cv::imshow("undistorted", depthmatUndistorted * 0.0002f);
+        cv::imshow("undistorted", depth16);
         cv::imshow("registered", rgbd);
 
 
         if (recording) {
-
             std::stringstream ss;
-            ss << "../../../data/d";
+            ss << "./data/depth/";
             ss << setfill('0') << setw(7) << frameCount;
             ss << ".png";
             //            std::cerr << "Gravando " << ss.str() << "\n";
@@ -190,13 +194,13 @@ int main()
 //            compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
 //            compression_params.push_back(0);
 //            cv::imwrite(ss.str(), depthmatUndistorted, compression_params);
-            cv::imwrite(ss.str(), depthmatUndistorted);
+            cv::imwrite(ss.str(), depth16);
 
             //limpar o ss
             ss.str(std::string());
             ss.clear();
 
-            ss << "../../../data/c";
+            ss << "./data/rgb/";
             ss << setfill('0') << setw(7) << frameCount;
             ss << ".png";
             //            std::cerr << "Gravando " << ss.str() << "\n";
@@ -205,8 +209,8 @@ int main()
         }
         //        cv::imshow("depth2RGB", rgbd2 / 4096.0f);
 
-        int key = cv::waitKey(1);
-        protonect_shutdown = protonect_shutdown || (key > 0 & 0 & ((key & 0xFF) == 27)); // shutdown on escape
+        char key = cv::waitKey(1);
+        protonect_shutdown = protonect_shutdown || key == 'q';
 
         if(key == 'r' || key == 'R'){
             recording = !recording;

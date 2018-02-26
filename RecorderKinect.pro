@@ -13,6 +13,8 @@ TEMPLATE = app
 
 CONFIG += c++11
 
+QMAKE_CXXFLAGS = -fpermissive -O3 -msse4.2
+
 SOURCES += \
     viewer.cpp \
     flextGL.cpp \
